@@ -5,6 +5,10 @@
 #include <Windows.h>
 
 struct Pt2i{
+	Pt2i() {
+		x = y = 0;
+	}
+
 	int x, y;
 };
 
@@ -21,7 +25,7 @@ private:
 
 private:
 
-	bool is_game_over;
+	bool is_game_over, is_ate_fruit;
 
 	int display_width, display_height;
 	
@@ -38,6 +42,10 @@ private:
 	void ResetFruitPos();
 	void UpdateSnakePos();
 	Pt2i GetNewSnakeHeadPos(const int dir);
+
+	bool CheckBodyCollision();
+	bool CheckBoundaryCollision();
+
 public:
 
 	SnakeGame(const int display_width, const int display_height);
@@ -65,13 +73,9 @@ SnakeGame::SnakeGame(const int display_width, const int display_height) {
 	
 	snake_move_dir = last_snake_move_dir = 0;
 
-	snake_pos.resize(5);
+	snake_pos.resize(1);
 	snake_pos[0].x = this->display_width / 2;
 	snake_pos[0].y = this->display_height / 2;
-	for (int i = 1; i < snake_pos.size(); i++) {
-		snake_pos[i].x = snake_pos[i - 1].x + 1;
-		snake_pos[i].y = snake_pos[i - 1].y;
-	}
 
 	ResetFruitPos();
 
@@ -84,11 +88,18 @@ void SnakeGame::Display() {
 	for (int i = 0, k = 0; i < display_height; i ++){
 		for (int j = 0; j < display_width; j++) {
 
-			if (k < snake_pos.size() && i == snake_pos[k].y && j == snake_pos[k].x) {
-				std::cout << "@";
-				k++;
-				continue;
+			bool is_draw_snake = false;
+			for (int k = 0; k < snake_pos.size(); k++) {
+				if (i == snake_pos[k].y && j == snake_pos[k].x) {
+					std::cout << "@";
+					is_draw_snake = true;
+					break;
+				}
 			}
+
+			if (is_draw_snake)
+				continue;
+
 			if (i == fruit_pos.y && j == fruit_pos.x){
 				std::cout << "m";
 				continue;
@@ -151,18 +162,35 @@ void SnakeGame::Input() {
 void SnakeGame::Logic() {
 
 	if (snake_pos[0].x == fruit_pos.x && snake_pos[0].y == fruit_pos.y){
+		is_ate_fruit = true;
 		scores += 10;
 		ResetFruitPos();
 	}
 
-	is_game_over = (snake_pos[0].x == display_width || snake_pos[0].x < 0 ||
-					snake_pos[0].y == display_height || snake_pos[0].y < 0) ? true : false;
+	is_game_over = CheckBoundaryCollision();
+
+	is_game_over = CheckBodyCollision();
 }
 
 void SnakeGame::ResetFruitPos() {
 	std::srand(time(NULL));
-	fruit_pos.x = rand() % this->display_width;
-	fruit_pos.y = rand() % this->display_height;
+	bool is_okay = true;
+
+	do {
+		fruit_pos.x = rand() % (this->display_width - 1);
+		fruit_pos.x = (fruit_pos.x == 0) ? 1 : fruit_pos.x;
+
+		fruit_pos.y = rand() % (this->display_height - 1);
+		fruit_pos.y = (fruit_pos.y == 0) ? 1 : fruit_pos.y;
+
+		for (int i = 0; i < snake_pos.size(); i++) {
+			if (fruit_pos.x == snake_pos[i].x && fruit_pos.y == snake_pos[i].y) {
+				is_okay = false;
+				break;
+			}
+		}
+
+	} while (!is_okay);
 }
 
 void SnakeGame::UpdateSnakePos() {
@@ -172,10 +200,16 @@ void SnakeGame::UpdateSnakePos() {
 
 	Pt2i new_snake_pos = GetNewSnakeHeadPos(snake_move_dir);
 
-	//avoid moving in opposite direction directly
-	if (new_snake_pos.x == snake_pos[1].x && new_snake_pos.y == snake_pos[1].y) {
+	//avoid moving in opposite dwirection directly
+	if (snake_pos.size() > 1.f && new_snake_pos.x == snake_pos[1].x && new_snake_pos.y == snake_pos[1].y) {
 		new_snake_pos = GetNewSnakeHeadPos(last_snake_move_dir);
 		snake_move_dir = last_snake_move_dir;
+	}
+
+	if (is_ate_fruit) {
+		Pt2i temp;
+		snake_pos.push_back(temp);
+		is_ate_fruit = false;
 	}
 
 	for (int i = snake_pos.size() - 1; i >= 1; i--)
@@ -206,4 +240,29 @@ Pt2i SnakeGame::GetNewSnakeHeadPos(const int dir) {
 	new_pos.y = (new_pos.y > display_height) ? display_height : new_pos.y;
 
 	return new_pos;
+}
+
+bool SnakeGame::CheckBoundaryCollision() {
+
+	bool is_collision = false;
+
+	is_collision = (snake_pos[0].x == display_width || snake_pos[0].x < 0 ||
+					snake_pos[0].y == display_height || snake_pos[0].y < 0) ? true : false;
+
+	return is_collision;
+}
+
+bool SnakeGame::CheckBodyCollision() {
+
+	bool is_collision = false;
+	Pt2i snake_head_pos = snake_pos[0];
+
+	for (int i = 1; i < snake_pos.size(); i++) {
+		if (snake_pos[i].x == snake_head_pos.x && snake_pos[i].y == snake_head_pos.y) {
+			is_collision = true;
+			break;
+		}
+	}
+
+	return is_collision;
 }
