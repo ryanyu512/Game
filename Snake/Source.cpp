@@ -40,12 +40,12 @@ private:
 	Pt2i fruit_pos;
 
 private:
-
-	void Display();
 	
 	void Input();
 	
 	void Logic();
+
+	void Display();
 
 	void ResetFruitPos();
 	
@@ -147,8 +147,8 @@ void SnakeGame::Display() {
 
 void SnakeGame::Input() {
 
-	//if (is_game_over)
-	//	return;
+	if (is_game_over)
+		return;
 
 	last_snake_move_dir = snake_move_dir;
 
@@ -188,9 +188,7 @@ void SnakeGame::Logic() {
 		ResetFruitPos();
 	}
 
-	is_game_over = CheckBoundaryCollision();
-
-	is_game_over = CheckBodyCollision();
+	is_game_over = (CheckBoundaryCollision() || CheckBodyCollision())? true: false;
 }
 
 void SnakeGame::ResetFruitPos() {
@@ -278,8 +276,8 @@ bool SnakeGame::CheckBoundaryCollision() {
 
 	bool is_collision = false;
 
-	is_collision = (snake_pos[0].x == display_width || snake_pos[0].x < 0 ||
-					snake_pos[0].y == display_height || snake_pos[0].y < 0) ? true : false;
+	is_collision = (snake_pos[0].x == display_width - 1  || snake_pos[0].x == 0 ||
+					snake_pos[0].y == display_height - 1 || snake_pos[0].y == 0) ? true : false;
 
 	return is_collision;
 }
